@@ -213,13 +213,47 @@ def generate_with_ollama(prompt: str) -> str:
     return text
 
 
-def generate_linkedin_post(title: str, summary: str) -> str:
+def is_gemini_quota_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    quota_markers = (
+        "resource_exhausted",
+        "quota exceeded",
+        "429",
+        "too many requests",
+    )
+    return any(marker in message for marker in quota_markers)
+
+
+def generate_with_gemini_fallback(prompt: str) -> str | None:
+    try:
+        return generate_with_gemini(prompt)
+    except Exception as exc:
+        if not is_gemini_quota_error(exc):
+            raise
+
+        logging.warning("Gemini quota/rate limit reached. Trying fallback strategy.")
+
+        if env_bool("ENABLE_OLLAMA_FALLBACK", default=True):
+            try:
+                logging.info("Attempting Ollama fallback generation.")
+                return generate_with_ollama(prompt)
+            except Exception as ollama_exc:
+                logging.warning("Ollama fallback failed: %s", ollama_exc)
+
+        if env_bool("SKIP_ON_GEMINI_QUOTA", default=True):
+            logging.info("Skipping this run due to Gemini quota exhaustion.")
+            return None
+
+        raise
+
+
+def generate_linkedin_post(title: str, summary: str) -> str | None:
     provider = os.getenv("MODEL_PROVIDER", "gemini").strip().lower()
     prompt = build_linkedin_prompt(title=title, summary=summary)
 
     logging.info("Generating LinkedIn post with provider: %s", provider)
     if provider == "gemini":
-        return generate_with_gemini(prompt)
+        return generate_with_gemini_fallback(prompt)
     if provider == "ollama":
         return generate_with_ollama(prompt)
     raise ValueError("MODEL_PROVIDER must be either 'gemini' or 'ollama'.")
@@ -344,6 +378,10 @@ def main() -> int:
             return 0
 
         generated_post = generate_linkedin_post(news["title"], news["summary"])
+        if not generated_post:
+            logging.info("No generated content available, skipping post.")
+            return 0
+
         logging.info("Generated post preview: %s", generated_post[:220].replace("\n", " "))
 
         publish_to_linkedin(
