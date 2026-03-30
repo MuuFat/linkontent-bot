@@ -1,0 +1,41 @@
+name: Daily LinkedIn Tech Post
+
+on:
+  schedule:
+    # Runs daily at 09:00 UTC
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Restore LinkedIn session state
+        env:
+          LINKEDIN_SESSION_B64: ${{ secrets.LINKEDIN_SESSION_B64 }}
+        run: |
+          printf '%s' "$LINKEDIN_SESSION_B64" | base64 --decode > linkedin_state.json
+
+      - name: Run daily workflow
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LINKEDIN_EMAIL: ${{ secrets.LINKEDIN_EMAIL }}
+          LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
+          LINKEDIN_STATE_FILE: linkedin_state.json
+          HEADLESS: "true"
+        run: |
+          python main.py

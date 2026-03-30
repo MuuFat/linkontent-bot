@@ -1,0 +1,11 @@
+# Local secrets
+.env
+
+# Playwright persisted auth/session
+linkedin_state.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
