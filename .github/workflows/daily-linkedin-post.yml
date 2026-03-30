@@ -1,5 +1,8 @@
 name: Daily LinkedIn Tech Post
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   schedule:
     # Runs daily at 09:00 UTC

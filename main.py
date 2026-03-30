@@ -46,6 +46,8 @@ REALISTIC_USER_AGENT = (
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/124.0.0.0 Safari/537.36"
 )
+GEMINI_DEFAULT_MODEL = "gemini-2.0-flash"
+GEMINI_FALLBACK_MODELS = (GEMINI_DEFAULT_MODEL, "gemini-2.0-flash-lite")
 
 
 def configure_logging() -> None:
@@ -151,22 +153,41 @@ Return only the final post text.
 
 def generate_with_gemini(prompt: str) -> str:
     api_key = required_env("GEMINI_API_KEY")
-    model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash").strip() or "gemini-1.5-flash"
+    model_name = os.getenv("GEMINI_MODEL", GEMINI_DEFAULT_MODEL).strip() or GEMINI_DEFAULT_MODEL
 
     try:
-        import google.generativeai as genai
+        from google import genai
     except ImportError as exc:
         raise ImportError(
-            "google-generativeai is not installed. Run: pip install google-generativeai"
+            "google-genai is not installed. Run: pip install google-genai"
         ) from exc
 
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(model_name)
-    response = model.generate_content(prompt)
-    text = (getattr(response, "text", "") or "").strip()
-    if not text:
-        raise RuntimeError("Gemini returned an empty response.")
-    return text
+    client = genai.Client(api_key=api_key)
+    candidate_models = [model_name, *GEMINI_FALLBACK_MODELS]
+    last_error: Exception | None = None
+
+    for candidate_model in candidate_models:
+        try:
+            response = client.models.generate_content(
+                model=candidate_model,
+                contents=prompt,
+            )
+            text = (getattr(response, "text", "") or "").strip()
+            if text:
+                if candidate_model != model_name:
+                    logging.warning(
+                        "Primary Gemini model '%s' unavailable; used fallback '%s'.",
+                        model_name,
+                        candidate_model,
+                    )
+                return text
+        except Exception as exc:
+            last_error = exc
+
+    raise RuntimeError(
+        "Gemini generation failed for all candidate models. "
+        "Set GEMINI_MODEL to one available in your project/region."
+    ) from last_error
 
 
 def generate_with_ollama(prompt: str) -> str:
