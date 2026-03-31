@@ -10,7 +10,7 @@ Environment variables:
 - FEED_URL (optional, default: https://techcrunch.com/feed/)
 - MODEL_PROVIDER (optional, gemini|ollama, default: gemini)
 - GEMINI_API_KEY (required if MODEL_PROVIDER=gemini)
-- GEMINI_MODEL (optional, default: gemini-1.5-flash)
+- GEMINI_MODEL (optional, default: models/gemini-3.1-flash-lite)
 - OLLAMA_MODEL (optional, default: llama3.1)
 - OLLAMA_URL (optional, default: http://localhost:11434/api/generate)
 - LINKEDIN_STATE_FILE (optional, default: linkedin_state.json)
@@ -46,8 +46,8 @@ REALISTIC_USER_AGENT = (
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/124.0.0.0 Safari/537.36"
 )
-GEMINI_DEFAULT_MODEL = "gemini-2.0-flash"
-GEMINI_FALLBACK_MODELS = (GEMINI_DEFAULT_MODEL, "gemini-2.0-flash-lite")
+GEMINI_DEFAULT_MODEL = "models/gemini-3.1-flash-lite"
+GEMINI_FALLBACK_MODELS = (GEMINI_DEFAULT_MODEL, "gemini-3.1-flash-lite")
 
 
 def configure_logging() -> None:
