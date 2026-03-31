@@ -10,7 +10,7 @@ Environment variables:
 - FEED_URL (optional, default: https://techcrunch.com/feed/)
 - MODEL_PROVIDER (optional, gemini|ollama, default: gemini)
 - GEMINI_API_KEY (required if MODEL_PROVIDER=gemini)
-- GEMINI_MODEL (optional, default: models/gemini-3.1-flash-lite)
+- GEMINI_MODEL (optional, default: gemini-2.5-flash-lite)
 - OLLAMA_MODEL (optional, default: llama3.1)
 - OLLAMA_URL (optional, default: http://localhost:11434/api/generate)
 - LINKEDIN_STATE_FILE (optional, default: linkedin_state.json)
@@ -46,8 +46,15 @@ REALISTIC_USER_AGENT = (
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/124.0.0.0 Safari/537.36"
 )
-GEMINI_DEFAULT_MODEL = "models/gemini-3.1-flash-lite"
-GEMINI_FALLBACK_MODELS = (GEMINI_DEFAULT_MODEL, "gemini-3.1-flash-lite")
+GEMINI_DEFAULT_MODEL = "gemini-2.5-flash-lite"
+GEMINI_FALLBACK_MODELS = (
+    "gemini-2.5-flash-lite",
+    "models/gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
+    "models/gemini-2.5-flash",
+    "gemini-3.1-flash-lite",
+    "models/gemini-3.1-flash-lite",
+)
 
 
 def configure_logging() -> None:
@@ -163,7 +170,8 @@ def generate_with_gemini(prompt: str) -> str:
         ) from exc
 
     client = genai.Client(api_key=api_key)
-    candidate_models = [model_name, *GEMINI_FALLBACK_MODELS]
+    # Accept both "gemini-x" and "models/gemini-x" formats.
+    candidate_models = list(dict.fromkeys([model_name, f"models/{model_name}", *GEMINI_FALLBACK_MODELS]))
     last_error: Exception | None = None
 
     for candidate_model in candidate_models:
@@ -224,10 +232,29 @@ def is_gemini_quota_error(exc: Exception) -> bool:
     return any(marker in message for marker in quota_markers)
 
 
+def is_gemini_model_not_found_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    markers = (
+        "not found",
+        "not_supported",
+        "is not found for api version",
+        "not supported for generatecontent",
+        "404",
+    )
+    return any(marker in message for marker in markers)
+
+
 def generate_with_gemini_fallback(prompt: str) -> str | None:
     try:
         return generate_with_gemini(prompt)
     except Exception as exc:
+        if is_gemini_model_not_found_error(exc):
+            logging.warning("Gemini model not found for this API/version or project.")
+            if env_bool("SKIP_ON_GEMINI_MODEL_NOT_FOUND", default=True):
+                logging.info("Skipping this run due to Gemini model compatibility mismatch.")
+                return None
+            raise
+
         if not is_gemini_quota_error(exc):
             raise
 
