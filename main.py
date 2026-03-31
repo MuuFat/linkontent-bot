@@ -330,6 +330,36 @@ def create_context_with_optional_state(browser, state_file: str):
     return browser.new_context(user_agent=REALISTIC_USER_AGENT)
 
 
+def on_linkedin_verification_page(page: Page) -> bool:
+    url = page.url.lower()
+    markers = ("/checkpoint", "/challenge", "/authwall")
+    return any(marker in url for marker in markers)
+
+
+def open_linkedin_composer(page: Page) -> None:
+    start_post_selectors = [
+        "button:has-text('Start a post')",
+        "button[aria-label*='Start a post']",
+        "button[aria-label*='Create a post']",
+    ]
+
+    for selector in start_post_selectors:
+        button = page.locator(selector).first
+        try:
+            if button.is_visible(timeout=5000):
+                button.click(timeout=PLAYWRIGHT_TIMEOUT_MS)
+                return
+        except Exception:
+            continue
+
+    logging.info("Feed composer button not found. Trying direct composer URL fallback.")
+    page.goto(
+        "https://www.linkedin.com/feed/?shareActive=true",
+        wait_until="domcontentloaded",
+        timeout=PLAYWRIGHT_TIMEOUT_MS,
+    )
+
+
 def publish_to_linkedin(
     post_text: str,
     news_url: str,
@@ -361,12 +391,16 @@ def publish_to_linkedin(
                         "Provide LINKEDIN_EMAIL and LINKEDIN_PASSWORD or refresh session state."
                     )
 
+            if on_linkedin_verification_page(page):
+                raise RuntimeError(
+                    "LinkedIn verification/checkpoint page detected. "
+                    "Refresh the saved session using save_linkedin_session.py."
+                )
+
             # Persist refreshed auth state after successful fallback login.
             context.storage_state(path=state_file)
 
-            start_post = page.locator("button:has-text('Start a post')").first
-            start_post.wait_for(state="visible", timeout=PLAYWRIGHT_TIMEOUT_MS)
-            start_post.click(timeout=PLAYWRIGHT_TIMEOUT_MS)
+            open_linkedin_composer(page)
 
             editor = page.locator("div[role='textbox']").first
             editor.wait_for(state="visible", timeout=PLAYWRIGHT_TIMEOUT_MS)
@@ -381,6 +415,14 @@ def publish_to_linkedin(
             logging.info("LinkedIn post submitted successfully.")
 
         except PlaywrightTimeoutError as exc:
+            logging.warning(
+                "LinkedIn post timed out. Current URL: %s. "
+                "UI may have changed, session may be stale, or verification appeared.",
+                page.url,
+            )
+            if env_bool("SKIP_ON_LINKEDIN_TIMEOUT", default=True):
+                logging.info("Skipping this run due to LinkedIn timeout.")
+                return
             raise RuntimeError(
                 "Timed out while posting to LinkedIn. UI may have changed or verification appeared."
             ) from exc
