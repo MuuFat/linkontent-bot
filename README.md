@@ -1,6 +1,6 @@
 # LinkedIn Tech News Auto-Poster
 
-Automated pipeline that fetches the latest TechCrunch headline, generates a professional LinkedIn post with AI, and publishes it to LinkedIn using a saved browser session.
+Automated pipeline that fetches the latest TechCrunch headline generates a professional LinkedIn post with AI, and publishes it to LinkedIn using a saved browser session.
 
 ## What This Project Does
 
