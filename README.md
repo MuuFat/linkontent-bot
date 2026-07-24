@@ -8,7 +8,7 @@ Automated pipeline that fetches the latest TechCrunch headline generates a profe
 2. Generates a LinkedIn ready post using Gemini or Ollama
 3. Publishes the post to LinkedIn through Playwright
 4. Runs daily via GitHub Actions
-5. Uses session-based authentication to reduce repeated 2FA prompts
+5. Uses session based authentication to reduce repeated 2FA prompts
 
 ## Architecture
 
