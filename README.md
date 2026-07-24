@@ -171,4 +171,4 @@ This repository demonstrates:
 - API fallback and resilience design
 - Browser automation with session persistence
 - CI/CD automation with scheduled jobs
-- Production-style logging and graceful degradation
+- Production style logging and graceful degradation
