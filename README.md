@@ -5,7 +5,7 @@ Automated pipeline that fetches the latest TechCrunch headline generates a profe
 ## What This Project Does
 
 1. Pulls the latest article from TechCrunch RSS (last 24 hours only)
-2. Generates a LinkedIn-ready post using Gemini or Ollama
+2. Generates a LinkedIn ready post using Gemini or Ollama
 3. Publishes the post to LinkedIn through Playwright
 4. Runs daily via GitHub Actions
 5. Uses session-based authentication to reduce repeated 2FA prompts
