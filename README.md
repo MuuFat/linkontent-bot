@@ -21,7 +21,7 @@ Automated pipeline that fetches the latest TechCrunch headline generates a profe
 
 - Python 3.11+
 - Playwright Chromium browser
-- Gemini API key (optional if using Ollama-only)
+- Gemini API key (optional if using Ollama only)
 
 Install dependencies:
 
