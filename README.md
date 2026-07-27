@@ -13,7 +13,7 @@ Automated pipeline that fetches the latest TechCrunch headline generates a profe
 ## Architecture
 
 - main.py: Single entry point for the entire workflow (fetch, generate, publish, logging)
-- save_linkedin_session.py: One-time helper to create/update LinkedIn session state
+- save_linkedin_session.py: One time helper to create/update LinkedIn session state
 - .github/workflows/daily-linkedin-post.yml: Daily scheduler and CI runner
 - .env.example: Environment variable template
 
